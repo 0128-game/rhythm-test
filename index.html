@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>リズムブロックゲーム</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a1a;
+            color: #fff;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            width: 100%;
+            max-width: 400px;
+            height: 100%;
+            max-height: 700px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            background: #2b2b2b;
+            position: relative;
+        }
+        header {
+            text-align: center;
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin: 0 0 10px 0;
+        }
+        #score-board {
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+        #message {
+            height: 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        /* プレイエリア */
+        #play-area {
+            flex-grow: 1;
+            position: relative;
+            background: #111;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        /* 降ってくるブロック */
+        .block {
+            position: absolute;
+            width: 25%;
+            height: 60px;
+            background: linear-gradient(135deg, #ff4e50, #f9d423);
+            border: 2px solid #fff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        /* 判定ライン */
+        #judge-line {
+            position: absolute;
+            bottom: 100px;
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        /* タップボタンエリア */
+        #controls {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            height: 100px;
+        }
+        .lane-btn {
+            background: #444;
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 1.2rem;
+            font-weight: bold;
+            transition: background 0.1s;
+        }
+        .lane-btn:active, .lane-btn.active {
+            background: #ff4e50;
+        }
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        #start-btn {
+            padding: 15px 30px;
+            font-size: 1.5rem;
+            background: #ff4e50;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <header>
+            <h1>Beat Blocks Lite</h1>
+            <div id="score-board">スコア: <span id="score">0</span></div>
+            <div id="message"></div>
+        </header>
+
+        <div id="play-area">
+            <div id="judge-line"></div>
+            <!-- ブロックがここに動的に追加されます -->
+        </div>
+
+        <div id="controls">
+            <button class="lane-btn" data-lane="0">1</button>
+            <button class="lane-btn" data-lane="1">2</button>
+            <button class="lane-btn" data-lane="2">3</button>
+            <button class="lane-btn" data-lane="3">4</button>
+        </div>
+
+        <div id="start-screen">
+            <h2>リズムに合わせてタップ！</h2>
+            <p>サイコロ風ブロックをタイミングよく押そう</p>
+            <button id="start-btn">ゲームスタート</button>
+        </div>
+    </div>
+
+    <script>
+        const lanes = 4;
+        const playArea = document.getElementById('play-area');
+        const scoreElem = document.getElementById('score');
+        const messageElem = document.getElementById('message');
+        const startScreen = document.getElementById('start-screen');
+        const startBtn = document.getElementById('start-btn');
+        const buttons = document.querySelectorAll('.lane-btn');
+
+        let score = 0;
+        let gameRunning = false;
+        let activeBlocks = [];
+        let spawnTimer = null;
+
+        // レーンの幅を計算するための割合 (25%)
+        const laneWidth = 100 / lanes;
+
+        startBtn.addEventListener('click', startGame);
+
+        function startGame() {
+            startScreen.style.display = 'none';
+            score = 0;
+            scoreElem.textContent = score;
+            gameRunning = true;
+            activeBlocks = [];
+            
+            // 一定間隔でブロックを生成
+            spawnTimer = setInterval(spawnBlock, 1000);
+            requestAnimationFrame(updateGame);
+        }
+
+        function spawnBlock() {
+            if (!gameRunning) return;
+            const lane = Math.floor(Math.random() * lanes);
+            
+            const block = document.createElement('div');
+            block.classList.add('block');
+            block.style.left = `${lane * laneWidth}%`;
+            block.style.top = '-60px';
+            block.dataset.lane = lane;
+            block.dataset.y = -60;
+
+            playArea.appendChild(block);
+            activeBlocks.push(block);
+        }
+
+        function updateGame() {
+            if (!gameRunning) return;
+
+            const playAreaHeight = playArea.clientHeight;
+            const judgeLineY = playAreaHeight - 100; // 判定ラインの位置
+
+            for (let i = activeBlocks.length - 1; i >= 0; i--) {
+                let block = activeBlocks[i];
+                let y = parseFloat(block.dataset.y);
+                y += 4; // 落下速度
+                block.dataset.y = y;
+                block.style.top = `${y}px`;
+
+                // 画面外（ミス判定）
+                if (y > playAreaHeight) {
+                    block.remove();
+                    activeBlocks.splice(i, 1);
+                    showJudgment("ミス...", "#ff4e50");
+                }
+            }
+
+            requestAnimationFrame(updateGame);
+        }
+
+        // タップ・クリック時の処理
+        buttons.forEach((btn, index) => {
+            const handleTap = (e) => {
+                e.preventDefault();
+                if (!gameRunning) return;
+
+                btn.classList.add('active');
+                setTimeout(() => btn.classList.remove('active'), 100);
+
+                checkJudgment(index);
+            };
+
+            btn.addEventListener('touchstart', handleTap);
+            btn.addEventListener('mousedown', handleTap);
+        });
+
+        function checkJudgment(tappedLane) {
+            const playAreaHeight = playArea.clientHeight;
+            const targetY = playAreaHeight - 100; // 判定ライン近辺
+            const threshold = 40; // 判定の許容範囲
+
+            let hitIndex = -1;
+            let minDistance = Infinity;
+
+            // 該当レーンの中で最も判定ラインに近いブロックを探す
+            for (let i = 0; i < activeBlocks.length; i++) {
+                let block = activeBlocks[i];
+                if (parseInt(block.dataset.lane) === tappedLane) {
+                    let y = parseFloat(block.dataset.y);
+                    let distance = Math.abs(y - targetY);
+                    if (distance < threshold && distance < minDistance) {
+                        minDistance = distance;
+                        hitIndex = i;
+                    }
+                }
+            }
+
+            if (hitIndex !== -1) {
+                // ヒット！
+                activeBlocks[hitIndex].remove();
+                activeBlocks.splice(hitIndex, 1);
+
+                if (minDistance < 15) {
+                    score += 100;
+                    showJudgment("パーフェクト！", "#ffd700");
+                } else {
+                    score += 50;
+                    showJudgment("グッド！", "#00ffcc");
+                }
+                scoreElem.textContent = score;
+            } else {
+                // 空振り
+                showJudgment("バッド", "#888");
+            }
+        }
+
+        function showJudgment(text, color) {
+            messageElem.textContent = text;
+            messageElem.style.color = color;
+            setTimeout(() => {
+                if (messageElem.textContent === text) {
+                    messageElem.textContent = "";
+                }
+            }, 300);
+        }
+    </script>
+</body>
+</html>
