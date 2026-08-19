@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>リズムブロックゲーム</title>
+    <title>Beat Blocks - Rhythm Editor Lite</title>
     <style>
         * {
             box-sizing: border-box;
@@ -13,284 +13,295 @@
         body {
             margin: 0;
             padding: 0;
-            background: #1a1a1a;
+            background: #121212;
             color: #fff;
             font-family: sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            min-height: 100vh;
             overflow: hidden;
         }
-        #game-container {
+        #app-container {
             width: 100%;
-            max-width: 400px;
-            height: 100%;
-            max-height: 700px;
+            max-width: 420px;
+            height: 100vh;
+            max-height: 750px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             padding: 20px;
-            background: #2b2b2b;
-            position: relative;
+            background: #1e1e1e;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
         }
         header {
             text-align: center;
         }
         h1 {
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             margin: 0 0 10px 0;
+            color: #ffaa00;
         }
-        #score-board {
-            font-size: 1.2rem;
-            margin-bottom: 5px;
-        }
-        #message {
-            height: 30px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            color: #ffd700;
-        }
-        /* プレイエリア */
-        #play-area {
-            flex-grow: 1;
-            position: relative;
-            background: #111;
-            border-radius: 10px;
-            overflow: hidden;
-            margin: 10px 0;
-        }
-        /* 降ってくるブロック */
-        .block {
-            position: absolute;
-            width: 25%;
-            height: 60px;
-            background: linear-gradient(135deg, #ff4e50, #f9d423);
-            border: 2px solid #fff;
+        .controls-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            background: #2a2a2a;
+            padding: 10px;
             border-radius: 8px;
+        }
+        .controls-top label {
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1.2rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            gap: 5px;
         }
-        /* 判定ライン */
-        #judge-line {
-            position: absolute;
-            bottom: 100px;
-            width: 100%;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.5);
+        .controls-top input[type="number"] {
+            width: 50px;
+            background: #111;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 4px;
+            border-radius: 4px;
+            text-align: center;
         }
-        /* タップボタンエリア */
-        #controls {
+        /* グリッドエディターエリア (View) */
+        #grid-editor {
+            flex-grow: 1;
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            height: 100px;
+            grid-template-rows: repeat(8, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
+            background: #141414;
+            padding: 10px;
+            border-radius: 8px;
         }
-        .lane-btn {
-            background: #444;
-            border: none;
-            border-radius: 10px;
-            color: #fff;
-            font-size: 1.2rem;
-            font-weight: bold;
-            transition: background 0.1s;
-        }
-        .lane-btn:active, .lane-btn.active {
-            background: #ff4e50;
-        }
-        #start-screen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-        }
-        #start-btn {
-            padding: 15px 30px;
-            font-size: 1.5rem;
-            background: #ff4e50;
-            color: white;
-            border: none;
-            border-radius: 30px;
+        .cell {
+            background: #2a2a2a;
+            border: 2px solid #3a3a3a;
+            border-radius: 6px;
             cursor: pointer;
+            transition: background 0.1s, border-color 0.1s;
+        }
+        .cell.active {
+            background: #ff4e50;
+            border-color: #ff888a;
+            box-shadow: 0 0 10px rgba(255, 78, 80, 0.5);
+        }
+        /* 再生中の行ハイライト */
+        .cell.playing-row {
+            border-color: #ffd700;
+        }
+        /* 下部ボタンエリア */
+        #action-bar {
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            flex: 1;
+            padding: 12px;
+            font-size: 1rem;
             font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn:active {
+            opacity: 0.8;
+        }
+        #play-btn {
+            background: #4cd137;
+            color: #fff;
+        }
+        #play-btn.playing {
+            background: #e84118;
+        }
+        #clear-btn {
+            background: #576574;
+            color: #fff;
         }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
+    <div id="app-container">
         <header>
-            <h1>Beat Blocks Lite</h1>
-            <div id="score-board">スコア: <span id="score">0</span></div>
-            <div id="message"></div>
+            <h1>Beat Blocks Editor</h1>
+            <div class="controls-top">
+                <label>BPM: <input type="number" id="bpm-input" value="120" min="60" max="200"></label>
+                <span id="status-text">停止中</span>
+            </div>
         </header>
 
-        <div id="play-area">
-            <div id="judge-line"></div>
-            <!-- ブロックがここに動的に追加されます -->
-        </div>
+        <!-- ドットグリッド (4列 × 8ステップ) -->
+        <div id="grid-editor"></div>
 
-        <div id="controls">
-            <button class="lane-btn" data-lane="0">1</button>
-            <button class="lane-btn" data-lane="1">2</button>
-            <button class="lane-btn" data-lane="2">3</button>
-            <button class="lane-btn" data-lane="3">4</button>
-        </div>
-
-        <div id="start-screen">
-            <h2>リズムに合わせてタップ！</h2>
-            <p>サイコロ風ブロックをタイミングよく押そう</p>
-            <button id="start-btn">ゲームスタート</button>
+        <div id="action-bar">
+            <button class="btn" id="clear-btn">クリア</button>
+            <button class="btn" id="play-btn">再生 / プレビュー</button>
         </div>
     </div>
 
     <script>
-        const lanes = 4;
-        const playArea = document.getElementById('play-area');
-        const scoreElem = document.getElementById('score');
-        const messageElem = document.getElementById('message');
-        const startScreen = document.getElementById('start-screen');
-        const startBtn = document.getElementById('start-btn');
-        const buttons = document.querySelectorAll('.lane-btn');
+        // --- 1. コアデータ構造 (Model) ---
+        const steps = 8; // 8ステップ（2小節分相当）
+        const lanes = 4; // 4つのレーン（ブロック）
+        let bpm = 120;
+        let isPlaying = false;
+        let currentStep = 0;
+        let timerId = null;
 
-        let score = 0;
-        let gameRunning = false;
-        let activeBlocks = [];
-        let spawnTimer = null;
+        // 2次元配列でグリッドの状態を保持 [step][lane] = true/false
+        let patternData = Array.from({ length: steps }, () => Array(lanes).fill(false));
 
-        // レーンの幅を計算するための割合 (25%)
-        const laneWidth = 100 / lanes;
+        // Web Audio APIを用いたサウンドエンジン
+        let audioCtx = null;
 
-        startBtn.addEventListener('click', startGame);
-
-        function startGame() {
-            startScreen.style.display = 'none';
-            score = 0;
-            scoreElem.textContent = score;
-            gameRunning = true;
-            activeBlocks = [];
-            
-            // 一定間隔でブロックを生成
-            spawnTimer = setInterval(spawnBlock, 1000);
-            requestAnimationFrame(updateGame);
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
         }
 
-        function spawnBlock() {
-            if (!gameRunning) return;
-            const lane = Math.floor(Math.random() * lanes);
-            
-            const block = document.createElement('div');
-            block.classList.add('block');
-            block.style.left = `${lane * laneWidth}%`;
-            block.style.top = '-60px';
-            block.dataset.lane = lane;
-            block.dataset.y = -60;
-
-            playArea.appendChild(block);
-            activeBlocks.push(block);
-        }
-
-        function updateGame() {
-            if (!gameRunning) return;
-
-            const playAreaHeight = playArea.clientHeight;
-            const judgeLineY = playAreaHeight - 100; // 判定ラインの位置
-
-            for (let i = activeBlocks.length - 1; i >= 0; i--) {
-                let block = activeBlocks[i];
-                let y = parseFloat(block.dataset.y);
-                y += 4; // 落下速度
-                block.dataset.y = y;
-                block.style.top = `${y}px`;
-
-                // 画面外（ミス判定）
-                if (y > playAreaHeight) {
-                    block.remove();
-                    activeBlocks.splice(i, 1);
-                    showJudgment("ミス...", "#ff4e50");
-                }
+        // 短い電子音（クリック音・ヒット音）を鳴らす関数
+        function playSound(isAccent = false) {
+            initAudio();
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
             }
 
-            requestAnimationFrame(updateGame);
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            // アクセント（拍の頭など）で音程を変える
+            osc.frequency.setValueAtTime(isAccent ? 440 : 330, audioCtx.currentTime);
+
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
         }
 
-        // タップ・クリック時の処理
-        buttons.forEach((btn, index) => {
-            const handleTap = (e) => {
-                e.preventDefault();
-                if (!gameRunning) return;
+        // --- 2. UI構築 (View) ---
+        const gridEditor = document.getElementById('grid-editor');
+        const cellElements = [];
 
-                btn.classList.add('active');
-                setTimeout(() => btn.classList.remove('active'), 100);
+        function buildGrid() {
+            gridEditor.innerHTML = '';
+            for (let s = 0; s < steps; s++) {
+                cellElements[s] = [];
+                for (let l = 0; l < lanes; l++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.step = s;
+                    cell.dataset.lane = l;
 
-                checkJudgment(index);
-            };
+                    // タップ/クリックでON/OFF切り替え
+                    cell.addEventListener('pointerdown', () => {
+                        patternData[s][l] = !patternData[s][l];
+                        updateGridUI();
+                    });
 
-            btn.addEventListener('touchstart', handleTap);
-            btn.addEventListener('mousedown', handleTap);
-        });
+                    gridEditor.appendChild(cell);
+                    cellElements[s][l] = cell;
+                }
+            }
+        }
 
-        function checkJudgment(tappedLane) {
-            const playAreaHeight = playArea.clientHeight;
-            const targetY = playAreaHeight - 100; // 判定ライン近辺
-            const threshold = 40; // 判定の許容範囲
+        function updateGridUI() {
+            for (let s = 0; s < steps; s++) {
+                for (let l = 0; l < lanes; l++) {
+                    const cell = cellElements[s][l];
+                    if (patternData[s][l]) {
+                        cell.classList.add('active');
+                    } else {
+                        cell.classList.remove('active');
+                    }
 
-            let hitIndex = -1;
-            let minDistance = Infinity;
-
-            // 該当レーンの中で最も判定ラインに近いブロックを探す
-            for (let i = 0; i < activeBlocks.length; i++) {
-                let block = activeBlocks[i];
-                if (parseInt(block.dataset.lane) === tappedLane) {
-                    let y = parseFloat(block.dataset.y);
-                    let distance = Math.abs(y - targetY);
-                    if (distance < threshold && distance < minDistance) {
-                        minDistance = distance;
-                        hitIndex = i;
+                    // 再生中の行の枠線をハイライト
+                    if (isPlaying && s === currentStep) {
+                        cell.classList.add('playing-row');
+                    } else {
+                        cell.classList.remove('playing-row');
                     }
                 }
             }
+        }
 
-            if (hitIndex !== -1) {
-                // ヒット！
-                activeBlocks[hitIndex].remove();
-                activeBlocks.splice(hitIndex, 1);
+        // --- 3. 再生エンジン・タイミング制御 ---
+        const playBtn = document.getElementById('play-btn');
+        const statusText = document.getElementById('status-text');
+        const bpmInput = document.getElementById('bpm-input');
 
-                if (minDistance < 15) {
-                    score += 100;
-                    showJudgment("パーフェクト！", "#ffd700");
-                } else {
-                    score += 50;
-                    showJudgment("グッド！", "#00ffcc");
-                }
-                scoreElem.textContent = score;
-            } else {
-                // 空振り
-                showJudgment("バッド", "#888");
+        bpmInput.addEventListener('change', (e) => {
+            bpm = parseInt(e.target.value) || 120;
+            if (isPlaying) {
+                stopPlayback();
+                startPlayback();
             }
+        });
+
+        playBtn.addEventListener('click', () => {
+            if (isPlaying) {
+                stopPlayback();
+            } else {
+                startPlayback();
+            }
+        });
+
+        document.getElementById('clear-btn').addEventListener('click', () => {
+            patternData = Array.from({ length: steps }, () => Array(lanes).fill(false));
+            updateGridUI();
+        });
+
+        function startPlayback() {
+            initAudio();
+            isPlaying = true;
+            currentStep = 0;
+            playBtn.textContent = "停止";
+            playBtn.classList.add('playing');
+            statusText.textContent = "再生中...";
+
+            // 16分音符ごとのインターバル時間を計算 (60秒 / BPM / 4분割)
+            const intervalMs = (60 / bpm / 4) * 1000;
+
+            timerId = setInterval(() => {
+                // 現在のステップでONになっているレーンがあれば音を鳴らす
+                for (let l = 0; l < lanes; l++) {
+                    if (patternData[currentStep][l]) {
+                        playSound(l === 0); // レーン0は少し音程を変える
+                    }
+                }
+
+                updateGridUI();
+
+                // 次のステップへ進む
+                currentStep = (currentStep + 1) % steps;
+            }, intervalMs);
         }
 
-        function showJudgment(text, color) {
-            messageElem.textContent = text;
-            messageElem.style.color = color;
-            setTimeout(() => {
-                if (messageElem.textContent === text) {
-                    messageElem.textContent = "";
-                }
-            }, 300);
+        function stopPlayback() {
+            isPlaying = false;
+            clearInterval(timerId);
+            playBtn.textContent = "再生 / プレビュー";
+            playBtn.classList.remove('playing');
+            statusText.textContent = "停止中";
+            currentStep = 0;
+            updateGridUI();
         }
+
+        // 初期化実行
+        buildGrid();
     </script>
 </body>
 </html>
